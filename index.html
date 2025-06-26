@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Monitoramento de Áreas - Geral</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background-color: #198754;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #157347;
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #bb2d3b;
+            transform: translateY(-1px);
+        }
+        
+        .status-indicator {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-execucao {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .status-concluida {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .status-inativa {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .status-aguardando {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        
+        .area-info {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .area-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .area-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .area-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .area-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .location-status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .location-success {
+            background-color: #d1edff;
+            color: #0c63e4;
+            border: 1px solid #b8daff;
+        }
+        
+        .location-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-map-marked-alt"></i> Sistema de Monitoramento de Áreas</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Paulínia - Controle de Atividades</p>
+        </div>
+        
+        <div class="controls">
+            <button id="btnLocalizarUsuario" class="btn btn-primary">
+                <i class="fas fa-location-arrow"></i>
+                Minha Localização
+            </button>
+            
+            <button id="btnVerTodasAreas" class="btn btn-success">
+                <i class="fas fa-eye"></i>
+                Ver Todas as Áreas
+            </button>
+            
+            <div id="locationStatus" class="location-status" style="display: none;"></div>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="area-info">
+            <h3><i class="fas fa-list"></i> Áreas Monitoradas</h3>
+            <div class="area-cards" id="areaCards">
+                <!-- Cards das áreas serão inseridos aqui dinamicamente -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Carregando mapa...</p>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <script>
+        // Variáveis globais
+        let map;
+        let userLocationMarker;
+        let areas = {};
+        
+        // Configuração das áreas
+        const areasConfig = {
+            'area01': {
+                nome: 'Área 01',
+                coords: [
+                    [-22.74802394492481, -47.15697375012292],
+                    [-22.747275121733605, -47.15598567604],
+                    [-22.74747360538878, -47.15395083040387],
+                    [-22.749684553716207, -47.154109601056966],
+                    [-22.74919471486596, -47.15550389764504],
+                    [-22.749347789695303, -47.15578054379347],
+                ],
+                status: 'aguardando',
+                descricao: 'Área de Futebol'
+            },
+            'area02': {
+                nome: 'Área 02',
+                coords: [
+                    [-22.749439561888387, -47.15573479394563],
+                    [-22.74922651577272, -47.15551340163666],
+                    [-22.75019409754315, -47.15371338590723],
+                    [-22.75117054926399, -47.154064725875806],
+                    [-22.75034944260188, -47.1550273011322],
+                    [-22.74947950799809, -47.15572516819308],
+                ],
+                status: 'aguardando',
+                descricao: 'Área de teste Medico'
+            },
+            'area11': {
+                nome: 'Área 11',
+                coords: [
+                    [-22.7489298154811, -47.15174288832557],
+                    [-22.75047148565457, -47.15199737669998],
+                    [-22.750289399532125, -47.15316451303781],
+                    [-22.748780098553386, -47.15294951423873]
+                ],
+                status: 'aguardando',
+                descricao: 'Área de Preparamento Fisico'
+            },
+            'area12': {
+                nome: 'Área 12',
+                coords: [
+                    [-22.7495, -47.1502],
+                    [-22.7495, -47.1513],
+                    [-22.7492, -47.1513],
+                    [-22.7492, -47.1502]
+                ],
+                status: 'aguardando',
+                descricao: 'Área de paseio'
+            },
+            'area13': {
+                nome: 'Área 22',
+                coords: [
+                    [-22.7486189, -47.1503870],
+                    [-22.7481431, -47.1503575],
+                    [-22.7483632, -47.1483405],
+                    [-22.7477133, -47.1481561],
+                    [-22.7477693, -47.1473430],
+                    [-22.7489980, -47.1456549],
+                    [-22.7507200, -47.1458900],
+                    [-22.7507802, -47.1466168],
+                    [-22.7502444, -47.1466560],
+                    [-22.7502159, -47.1469665],
+                    [-22.7489896, -47.1468327],
+                    [-22.7487769, -47.1494143],
+                    [-22.7486365, -47.1499763],
+                    [-22.7486121, -47.1503679]
+                ],
+                status: 'inativa',
+                descricao: 'Área temporariamente inativa'
+            },
+            'area14': {
+                nome: 'Área 23',
+                coords: [
+                    [-22.7513556, -47.1532459],
+                    [-22.7509561, -47.1531839],
+                    [-22.7508018, -47.1529686],
+                    [-22.7507653, -47.1518602],
+                    [-22.7516113, -47.1517800],
+                    [-22.7516592, -47.1527798],
+                    [-22.7514483, -47.1530826]
+                ],
+                status: 'inativa',
+                descricao: 'Área em manutenção'
+            }
+        };
+        
+        // Estilos para diferentes status
+        const estilos = {
+            principal: {
+                color: '#198754',
+                fillColor: '#19875433',
+                fillOpacity: 0.5,
+                weight: 2
+            },
+            execucao: {
+                color: '#dc3545',
+                fillColor: '#dc354577',
+                fillOpacity: 0.7,
+                weight: 2
+            },
+            concluida: {
+                color: '#0d6efd',
+                fillColor: '#0d6efd66',
+                fillOpacity: 0.6,
+                weight: 2
+            },
+            inativa: {
+                color: '#6c757d',
+                fillColor: '#6c757d',
+                fillOpacity: 0.5,
+                weight: 2
+            },
+            aguardando: {
+                color: '#ffc107',
+                fillColor: '#ffc10766',
+                fillOpacity: 0.6,
+                weight: 2
+            }
+        };
+        
+        // Função para obter localização do usuário
+        function obterLocalizacaoUsuario() {
+            const statusDiv = document.getElementById('locationStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'location-status';
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Obtendo sua localização...';
+            
+            if (!navigator.geolocation) {
+                statusDiv.className = 'location-status location-error';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Geolocalização não suportada pelo navegador';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Remove marcador anterior se existir
+                    if (userLocationMarker) {
+                        map.removeLayer(userLocationMarker);
+                    }
+                    
+                    // Cria ícone personalizado para localização do usuário
+                    const userIcon = L.divIcon({
+                        className: 'user-location-icon',
+                        html: '<div style="background-color: #007bff; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: relative;"><div style="position: absolute; top: -5px; left: -5px; width: 30px; height: 30px; border-radius: 50%; background-color: rgba(0,123,255,0.3); animation: pulse 2s infinite;"></div></div>',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+                    
+                    // Adiciona marcador da localização do usuário
+                    userLocationMarker = L.marker([lat, lng], { icon: userIcon })
+                        .addTo(map)
+                        .bindPopup('<b><i class="fas fa-user"></i> Sua Localização</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6));
+                    
+                    // Centraliza o mapa na localização do usuário
+                    map.setView([lat, lng], 16);
+                    
+                    statusDiv.className = 'location-status location-success';
+                    statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> Localização obtida com sucesso!';
+                    
+                    // Remove a mensagem após 3 segundos
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                },
+                function(error) {
+                    let errorMessage = 'Erro ao obter localização: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Permissão negada pelo usuário';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Localização indisponível';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Tempo limite excedido';
+                            break;
+                        default:
+                            errorMessage += 'Erro desconhecido';
+                            break;
+                    }
+                    
+                    statusDiv.className = 'location-status location-error';
+                    statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + errorMessage;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+        
+        // Função para focar em uma área específica
+        function focarArea(areaId) {
+            if (areas[areaId]) {
+                const bounds = areas[areaId].getBounds();
+                map.fitBounds(bounds, { padding: [20, 20] });
+                areas[areaId].openPopup();
+            }
+        }
+        
+        // Função para iniciar atividade em uma área
+        function iniciarAtividade(areaId) {
+            if (confirm('Deseja iniciar a atividade na ' + areasConfig[areaId].nome + '?')) {
+                // Atualiza o status da área
+                areasConfig[areaId].status = 'execucao';
+                areasConfig[areaId].dataInicio = new Date().toISOString();
+                
+                // Atualiza o estilo visual da área
+                areas[areaId].setStyle(estilos.execucao);
+                
+                // Atualiza o popup
+                const novoPopup = criarPopupContent(areaId, areasConfig[areaId]);
+                areas[areaId].bindPopup(novoPopup);
+                
+                // Atualiza os cards
+                criarCardsAreas();
+                
+                // Simula salvamento no banco de dados
+                salvarNoBancoDados(areaId, areasConfig[areaId]);
+                
+                alert('Atividade iniciada na ' + areasConfig[areaId].nome + '!');
+            }
+        }
+        
+        // Função para criar conteúdo do popup
+        function criarPopupContent(areaId, areaConfig) {
+            const statusClass = 'status-' + areaConfig.status;
+            const statusText = {
+                'aguardando': 'Aguardando',
+                'execucao': 'Em Execução',
+                'concluida': 'Concluída',
+                'inativa': 'Inativa'
+            };
+            
+            let content = `
+                <div style="min-width: 200px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">
+                        <i class="fas fa-map-marker-alt"></i> ${areaConfig.nome}
+                    </h4>
+                    <p style="margin: 5px 0; color: #666; font-size: 13px;">${areaConfig.descricao}</p>
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator ${statusClass}">${statusText[areaConfig.status]}</span>
+                    </div>
+            `;
+            
+            if (areaConfig.dataInicio) {
+                const dataInicio = new Date(areaConfig.dataInicio);
+                content += `<p style="margin: 5px 0; font-size: 12px; color: #666;">
+                    <i class="fas fa-clock"></i> Iniciado em: ${dataInicio.toLocaleString('pt-BR')}
+                </p>`;
+            }
+            
+            content += `
+                    <div style="margin-top: 15px; display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button onclick="focarArea('${areaId}')" class="btn btn-primary" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-search-plus"></i> Focar
+                        </button>
+            `;
+            
+            if (areaConfig.status === 'aguardando') {
+                content += `
+                        <button onclick="iniciarAtividade('${areaId}')" class="btn btn-danger" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                `;
+            }
+            
+            content += `
+                    </div>
+                </div>
+            `;
+            
+            return content;
+        }
+        
+        // Função para simular salvamento no banco de dados
+        function salvarNoBancoDados(areaId, areaConfig) {
+            const dados = {
+                area_id: areaId,
+                nome_area: areaConfig.nome,
+                data_inicio: areaConfig.dataInicio,
+                iniciado: 'YES',
+                status: 'em_execucao',
+                coordenadas: areaConfig.coords,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Simula salvamento (em uma aplicação real, isso seria uma chamada para API)
+            console.log('Dados salvos no banco:', dados);
+            
+            // Salva no localStorage para persistência local
+            localStorage.setItem('area_' + areaId, JSON.stringify(dados));
+        }
+        
+        // Função para criar cards das áreas
+        function criarCardsAreas() {
+            const container = document.getElementById('areaCards');
+            container.innerHTML = '';
+            
+            Object.keys(areasConfig).forEach(areaId => {
+                const area = areasConfig[areaId];
+                const statusClass = 'status-' + area.status;
+                const statusText = {
+                    'aguardando': 'Aguardando',
+                    'execucao': 'Em Execução',
+                    'concluida': 'Concluída',
+                    'inativa': 'Inativa'
+                };
+                
+                const card = document.createElement('div');
+                card.className = 'area-card';
+                
+                let cardContent = `
+                    <h4><i class="fas fa-map-marker-alt"></i> ${area.nome}</h4>
+                    <p style="color: #666; font-size: 14px; margin: 5px 0;">${area.descricao}</p>
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator ${statusClass}">${statusText[area.status]}</span>
+                    </div>
+                `;
+                
+                if (area.dataInicio) {
+                    const dataInicio = new Date(area.dataInicio);
+                    cardContent += `
+                        <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                            <i class="fas fa-clock"></i> Iniciado: ${dataInicio.toLocaleString('pt-BR')}
+                        </p>
+                    `;
+                }
+                
+                cardContent += `
+                    <div style="margin-top: 15px; display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button onclick="focarArea('${areaId}')" class="btn btn-primary" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-search-plus"></i> Focar
+                        </button>
+                `;
+                
+                if (area.status === 'aguardando') {
+                    cardContent += `
+                        <button onclick="iniciarAtividade('${areaId}')" class="btn btn-danger" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                    `;
+                }
+                
+                cardContent += `</div>`;
+                card.innerHTML = cardContent;
+                container.appendChild(card);
+            });
+        }
+        
+        // Função para adicionar animação CSS para o ícone de localização
+        function adicionarEstilosAnimacao() {
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% {
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(2);
+                        opacity: 0;
+                    }
+                }
+                
+                .user-location-icon {
+                    background: transparent !important;
+                    border: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Inicialização do mapa
+        setTimeout(function () {
+            document.getElementById('loading').style.display = 'block';
+            
+            // Adiciona estilos de animação
+            adicionarEstilosAnimacao();
+            
+            // Inicializa o mapa
+            map = L.map('map', {
+                minZoom: 15,
+                maxZoom: 18
+            }).setView([-22.749680, -47.151119], 16);
+
+            // Estilo de mapa clean (Carto Light)
+            const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd'
+            }).addTo(map);
+
+            // Área Principal (Syngenta)
+            const areaPrincipalCoords = [
+                [-22.747190336002834, -47.156007608754706],
+                [-22.747981881413626, -47.15711267883041],
+                [-22.750202191110606, -47.155126005638664],
+                [-22.751666514238092, -47.15339866309313],
+                [-22.751369693267698, -47.15026584301074],
+                [-22.75078594343404, -47.148130804564005],
+                [-22.75080573160447, -47.146092325783556],
+                [-22.75016261459839, -47.145716816534524],
+                [-22.748876371505066, -47.14562025701335],
+                [-22.747611148833396, -47.147400481256376],
+                [-22.74669692212085, -47.15250450322753],
+            ];
+            
+            const areaPrincipal = L.polygon(areaPrincipalCoords, estilos.principal)
+                .addTo(map)
+                .bindPopup("<b><i class='fas fa-building'></i> Área Principal</b><br>Syngenta Paulínia");
+
+            // Limita movimento do mapa à área principal
+            const limites = areaPrincipal.getBounds();
+            map.setMaxBounds(limites);
+            map.panInsideBounds(limites);
+
+            // Cria as áreas baseadas na configuração
+            Object.keys(areasConfig).forEach(areaId => {
+                const areaConfig = areasConfig[areaId];
+                const estilo = estilos[areaConfig.status] || estilos.aguardando;
+                
+                areas[areaId] = L.polygon(areaConfig.coords, estilo)
+                    .addTo(map)
+                    .bindPopup(criarPopupContent(areaId, areaConfig));
+            });
+
+            // Ajusta visão para mostrar tudo
+            const todasAreas = Object.values(areas);
+            todasAreas.push(areaPrincipal);
+            const group = L.featureGroup(todasAreas);
+            map.fitBounds(group.getBounds());
+            
+            // Cria os cards das áreas
+            criarCardsAreas();
+            
+            // Esconde o loading
+            document.getElementById('loading').style.display = 'none';
+            
+            // Event listeners para os botões
+            document.getElementById('btnLocalizarUsuario').addEventListener('click', obterLocalizacaoUsuario);
+            
+            document.getElementById('btnVerTodasAreas').addEventListener('click', function() {
+                map.fitBounds(group.getBounds());
+            });
+            
+        }, 200);
+    </script>
+</body>
+</html>
