@@ -190,7 +190,7 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-map-marked-alt"></i> Sistema de Monitoramento de Áreas</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Paulínia - Controle de Atividades</p>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Nova Odessa - Controle de Atividades</p>
         </div>
         
         <div class="controls">
@@ -628,7 +628,7 @@
                 subdomains: 'abcd'
             }).addTo(map);
 
-            // Área Principal (Syngenta)
+            // Área Principal (Chacara Reboava)
             const areaPrincipalCoords = [
                 [-22.747190336002834, -47.156007608754706],
                 [-22.747981881413626, -47.15711267883041],
@@ -645,7 +645,7 @@
             
             const areaPrincipal = L.polygon(areaPrincipalCoords, estilos.principal)
                 .addTo(map)
-                .bindPopup("<b><i class='fas fa-building'></i> Área Principal</b><br>Syngenta Paulínia");
+                .bindPopup("<b><i class='fas fa-building'></i> Área Principal</b><br>Chacara Revoada");
 
             // Limita movimento do mapa à área principal
             const limites = areaPrincipal.getBounds();
