@@ -104,23 +104,28 @@
         }
         
         .status-execucao {
-            background-color: #dc3545;
+            background-color: #0d6efd; /* Azul */
             color: white;
         }
         
         .status-concluida {
-            background-color: #0d6efd;
+            background-color: #198754; /* Verde */
             color: white;
         }
         
         .status-inativa {
-            background-color: #6c757d;
+            background-color: #6c757d; /* Cinza */
             color: white;
         }
         
         .status-aguardando {
-            background-color: #ffc107;
+            background-color: #ffc107; /* Laranja */
             color: #000;
+        }
+
+        .status-pausada {
+            background-color: #dc3545; /* Vermelho */
+            color: white;
         }
         
         #map {
@@ -202,6 +207,11 @@
             <button id="btnVerTodasAreas" class="btn btn-success">
                 <i class="fas fa-eye"></i>
                 Ver Todas as Áreas
+            </button>
+
+            <button id="btnIniciarTarefaNaMinhaArea" class="btn btn-info">
+                <i class="fas fa-play-circle"></i>
+                Iniciar Tarefa na Minha Área
             </button>
             
             <div id="locationStatus" class="location-status" style="display: none;"></div>
@@ -327,27 +337,33 @@
                 weight: 2
             },
             execucao: {
-                color: '#dc3545',
-                fillColor: '#dc354577',
-                fillOpacity: 0.7,
-                weight: 2
-            },
-            concluida: {
-                color: '#0d6efd',
+                color: '#0d6efd', /* Azul */
                 fillColor: '#0d6efd66',
                 fillOpacity: 0.6,
                 weight: 2
             },
+            concluida: {
+                color: '#198754', /* Verde */
+                fillColor: '#19875433',
+                fillOpacity: 0.5,
+                weight: 2
+            },
             inativa: {
-                color: '#6c757d',
+                color: '#6c757d', /* Cinza */
                 fillColor: '#6c757d',
                 fillOpacity: 0.5,
                 weight: 2
             },
             aguardando: {
-                color: '#ffc107',
+                color: '#ffc107', /* Laranja */
                 fillColor: '#ffc10766',
                 fillOpacity: 0.6,
+                weight: 2
+            },
+            pausada: {
+                color: '#dc3545', /* Vermelho */
+                fillColor: '#dc354577',
+                fillOpacity: 0.7,
                 weight: 2
             }
         };
@@ -459,13 +475,54 @@
                 alert('Atividade iniciada na ' + areasConfig[areaId].nome + '!');
             }
         }
-        
+
+        // Função para pausar atividade em uma área
+        function pausarAtividade(areaId) {
+            if (confirm('Deseja pausar a atividade na ' + areasConfig[areaId].nome + '?')) {
+                areasConfig[areaId].status = 'pausada';
+                areas[areaId].setStyle(estilos.pausada);
+                const novoPopup = criarPopupContent(areaId, areasConfig[areaId]);
+                areas[areaId].bindPopup(novoPopup);
+                criarCardsAreas();
+                salvarNoBancoDados(areaId, areasConfig[areaId]);
+                alert('Atividade pausada na ' + areasConfig[areaId].nome + '!');
+            }
+        }
+
+        // Função para retomar atividade em uma área
+        function retomarAtividade(areaId) {
+            if (confirm('Deseja retomar a atividade na ' + areasConfig[areaId].nome + '?')) {
+                areasConfig[areaId].status = 'execucao';
+                areas[areaId].setStyle(estilos.execucao);
+                const novoPopup = criarPopupContent(areaId, areasConfig[areaId]);
+                areas[areaId].bindPopup(novoPopup);
+                criarCardsAreas();
+                salvarNoBancoDados(areaId, areasConfig[areaId]);
+                alert('Atividade retomada na ' + areasConfig[areaId].nome + '!');
+            }
+        }
+
+        // Função para finalizar atividade em uma área
+        function finalizarAtividade(areaId) {
+            if (confirm('Deseja finalizar a atividade na ' + areasConfig[areaId].nome + '?')) {
+                areasConfig[areaId].status = 'concluida';
+                areasConfig[areaId].dataFim = new Date().toISOString();
+                areas[areaId].setStyle(estilos.concluida);
+                const novoPopup = criarPopupContent(areaId, areasConfig[areaId]);
+                areas[areaId].bindPopup(novoPopup);
+                criarCardsAreas();
+                salvarNoBancoDados(areaId, areasConfig[areaId]);
+                alert('Atividade finalizada na ' + areasConfig[areaId].nome + '!');
+            }
+        }
+
         // Função para criar conteúdo do popup
         function criarPopupContent(areaId, areaConfig) {
             const statusClass = 'status-' + areaConfig.status;
             const statusText = {
                 'aguardando': 'Aguardando',
                 'execucao': 'Em Execução',
+                'pausada': 'Pausada',
                 'concluida': 'Concluída',
                 'inativa': 'Inativa'
             };
@@ -487,6 +544,13 @@
                     <i class="fas fa-clock"></i> Iniciado em: ${dataInicio.toLocaleString('pt-BR')}
                 </p>`;
             }
+
+            if (areaConfig.dataFim) {
+                const dataFim = new Date(areaConfig.dataFim);
+                content += `<p style="margin: 5px 0; font-size: 12px; color: #666;">
+                    <i class="fas fa-flag-checkered"></i> Finalizado em: ${dataFim.toLocaleString('pt-BR')}
+                </p>`;
+            }
             
             content += `
                     <div style="margin-top: 15px; display: flex; gap: 5px; flex-wrap: wrap;">
@@ -499,6 +563,24 @@
                 content += `
                         <button onclick="iniciarAtividade('${areaId}')" class="btn btn-danger" style="font-size: 12px; padding: 5px 10px;">
                             <i class="fas fa-play"></i> Iniciar
+                        </button>
+                `;
+            } else if (areaConfig.status === 'execucao') {
+                content += `
+                        <button onclick="pausarAtividade('${areaId}')" class="btn btn-warning" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-pause"></i> Pausar
+                        </button>
+                        <button onclick="finalizarAtividade('${areaId}')" class="btn btn-success" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-flag-checkered"></i> Finalizar
+                        </button>
+                `;
+            } else if (areaConfig.status === 'pausada') {
+                content += `
+                        <button onclick="retomarAtividade('${areaId}')" class="btn btn-info" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-play"></i> Retomar
+                        </button>
+                        <button onclick="finalizarAtividade('${areaId}')" class="btn btn-success" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-flag-checkered"></i> Finalizar
                         </button>
                 `;
             }
@@ -518,7 +600,7 @@
                 nome_area: areaConfig.nome,
                 data_inicio: areaConfig.dataInicio,
                 iniciado: 'YES',
-                status: 'em_execucao',
+                status: areaConfig.status,
                 coordenadas: areaConfig.coords,
                 timestamp: new Date().toISOString()
             };
@@ -529,24 +611,90 @@
             // Salva no localStorage para persistência local
             localStorage.setItem('area_' + areaId, JSON.stringify(dados));
         }
+
+        // Função para verificar se um ponto está dentro de um polígono (Ray Casting Algorithm)
+        function pointInPolygon(point, vs) {
+            // point: [latitude, longitude]
+            // vs: array de pontos do polígono [[lat1, lng1], [lat2, lng2], ...]
+
+            var x = point[0], y = point[1];
+
+            var inside = false;
+            for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                var xi = vs[i][0], yi = vs[i][1];
+                var xj = vs[j][0], yj = vs[j][1];
+
+                var intersect = ((yi > y) != (yj > y)) && (
+                    x < (xj - xi) * (y - yi) / (yj - yi) + xi
+                );
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+
+        // Função para iniciar tarefa na área do usuário
+        function iniciarTarefaNaMinhaArea() {
+            const statusDiv = document.getElementById('locationStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'location-status';
+
+            if (!userLocationMarker) {
+                statusDiv.className = 'location-status location-error';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Sua localização não foi obtida. Por favor, clique em "Minha Localização" primeiro.';
+                return;
+            }
+
+            const userLat = userLocationMarker.getLatLng().lat;
+            const userLng = userLocationMarker.getLatLng().lng;
+            const userPoint = [userLat, userLng];
+
+            let areaEncontrada = null;
+            for (const areaId in areasConfig) {
+                const area = areasConfig[areaId];
+                if (pointInPolygon(userPoint, area.coords)) {
+                    areaEncontrada = areaId;
+                    break;
+                }
+            }
+
+            if (areaEncontrada) {
+                if (areasConfig[areaEncontrada].status === 'aguardando') {
+                    iniciarAtividade(areaEncontrada);
+                    statusDiv.className = 'location-status location-success';
+                    statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Atividade iniciada na ${areasConfig[areaEncontrada].nome}!`;
+                } else {
+                    statusDiv.className = 'location-status location-info';
+                    statusDiv.innerHTML = `<i class="fas fa-info-circle"></i> A atividade na ${areasConfig[areaEncontrada].nome} já está ${areasConfig[areaEncontrada].status}.`;
+                }
+            } else {
+                statusDiv.className = 'location-status location-error';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Você não está dentro de nenhuma área monitorada.';
+            }
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
         
         // Função para criar cards das áreas
         function criarCardsAreas() {
-            const container = document.getElementById('areaCards');
-            container.innerHTML = '';
+            const container = document.getElementById("areaCards");
+            container.innerHTML = "";
             
             Object.keys(areasConfig).forEach(areaId => {
                 const area = areasConfig[areaId];
-                const statusClass = 'status-' + area.status;
+                const statusClass = "status-" + area.status;
                 const statusText = {
-                    'aguardando': 'Aguardando',
-                    'execucao': 'Em Execução',
-                    'concluida': 'Concluída',
-                    'inativa': 'Inativa'
+                    "aguardando": "Aguardando",
+                    "execucao": "Em Execução",
+                    "pausada": "Pausada",
+                    "concluida": "Concluída",
+                    "inativa": "Inativa"
                 };
                 
-                const card = document.createElement('div');
-                card.className = 'area-card';
+                const card = document.createElement("div");
+                card.className = "area-card";
                 
                 let cardContent = `
                     <h4><i class="fas fa-map-marker-alt"></i> ${area.nome}</h4>
@@ -560,7 +708,16 @@
                     const dataInicio = new Date(area.dataInicio);
                     cardContent += `
                         <p style="font-size: 12px; color: #666; margin: 5px 0;">
-                            <i class="fas fa-clock"></i> Iniciado: ${dataInicio.toLocaleString('pt-BR')}
+                            <i class="fas fa-clock"></i> Iniciado: ${dataInicio.toLocaleString("pt-BR")}
+                        </p>
+                    `;
+                }
+
+                if (area.dataFim) {
+                    const dataFim = new Date(area.dataFim);
+                    cardContent += `
+                        <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                            <i class="fas fa-flag-checkered"></i> Finalizado: ${dataFim.toLocaleString("pt-BR")}
                         </p>
                     `;
                 }
@@ -576,6 +733,24 @@
                     cardContent += `
                         <button onclick="iniciarAtividade('${areaId}')" class="btn btn-danger" style="font-size: 12px; padding: 5px 10px;">
                             <i class="fas fa-play"></i> Iniciar
+                        </button>
+                    `;
+                } else if (area.status === 'execucao') {
+                    cardContent += `
+                        <button onclick="pausarAtividade('${areaId}')" class="btn btn-warning" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-pause"></i> Pausar
+                        </button>
+                        <button onclick="finalizarAtividade('${areaId}')" class="btn btn-success" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-flag-checkered"></i> Finalizar
+                        </button>
+                    `;
+                } else if (area.status === 'pausada') {
+                    cardContent += `
+                        <button onclick="retomarAtividade('${areaId}')" class="btn btn-info" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-play"></i> Retomar
+                        </button>
+                        <button onclick="finalizarAtividade('${areaId}')" class="btn btn-success" style="font-size: 12px; padding: 5px 10px;">
+                            <i class="fas fa-flag-checkered"></i> Finalizar
                         </button>
                     `;
                 }
@@ -672,14 +847,19 @@
             criarCardsAreas();
             
             // Esconde o loading
-            document.getElementById('loading').style.display = 'none';
+            document.getElementById("loading").style.display = "none";
+
+            // Obtém a localização do usuário automaticamente
+            obterLocalizacaoUsuario();
             
             // Event listeners para os botões
-            document.getElementById('btnLocalizarUsuario').addEventListener('click', obterLocalizacaoUsuario);
+            document.getElementById("btnLocalizarUsuario").addEventListener("click", obterLocalizacaoUsuario);
             
-            document.getElementById('btnVerTodasAreas').addEventListener('click', function() {
+            document.getElementById("btnVerTodasAreas").addEventListener("click", function() {
                 map.fitBounds(group.getBounds());
             });
+
+            document.getElementById("btnIniciarTarefaNaMinhaArea").addEventListener("click", iniciarTarefaNaMinhaArea);
             
         }, 200);
     </script>
